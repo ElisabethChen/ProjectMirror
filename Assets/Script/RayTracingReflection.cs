@@ -50,33 +50,60 @@ public class RayTracingReflection : MonoBehaviour
         {
             for (int x = 0; x < width; x++)
             {
-                // test code for line
-                LineRenderer lRend = createLineRendComp(x, y);
-                lRend.positionCount = 1;
-                lRend.SetPosition(0, camPos);
+                // forRayTracing(x, y);
 
-                float remainingLength = rayLength;
-                for (int i = 0; i < reflections; i++)
-                {
-                    Ray ray = Camera.main.ScreenPointToRay(new Vector3(x, y, 0));
-                    if (Physics.Raycast(ray.origin, ray.direction, out hit, rayLength, mirrorMask))
-                    {
-                        // test code for line
-                        lRend.positionCount += 1;
-                        lRend.SetPosition(lRend.positionCount - 1, hit.point);
-
-                        remainingLength -= Vector3.Distance(ray.origin, hit.point);
-                        ray = new Ray(hit.point, Vector3.Reflect(ray.direction, hit.normal));
-                    } else
-                    {   
-                        // test code for line: will cast a ray though object that are not mirrors
-                        lRend.positionCount += 1;
-                        lRend.SetPosition(testLine.positionCount - 1, ray.origin + ray.direction * remainingLength);
-                        break;
-                    }
-                }
             }
         }
+    }
+
+    private void forRayTracing(int x, int y){
+        // test code for line
+        LineRenderer lRend = createLineRendComp(x, y);
+        lRend.positionCount = 1;
+        lRend.SetPosition(0, camPos);
+        Color pixelColor;
+
+        float remainingLength = rayLength;
+        Ray ray = Camera.main.ScreenPointToRay(new Vector3(x, y, 0));
+
+        for (int i = 0; i < reflections; i++)
+        {
+            if (Physics.Raycast(ray.origin, ray.direction, out hit, remainingLength))
+            {
+                lRend.positionCount += 1;
+                lRend.SetPosition(lRend.positionCount - 1, hit.point);
+                if (hit.collider.tag == "Mirror")
+                {
+                    remainingLength -= Vector3.Distance(ray.origin, hit.point);
+                    ray = new Ray(hit.point, Vector3.Reflect(ray.direction, hit.normal));
+                    Debug.Log("hit mirror");
+                }
+                else
+                {
+                    pixelColor = new Color(1, 0, 0);    // TODO: set object color
+                    setPixelColor(x, y, pixelColor);
+                    Debug.Log("ray hit a object");
+                    break;
+                }
+            } else
+            {
+                lRend.positionCount += 1;
+                lRend.SetPosition(lRend.positionCount - 1, ray.origin + ray.direction * remainingLength);
+                if (i == 0)     // the ray from the camera did not hit any object
+                {
+                    Debug.Log("First ray did not hit any object");
+                    break;
+                }
+                Debug.Log("reflection did not hit any object");
+                // if the ray is a reflection of a mirror, then:
+                // TODO: set the pixel color as the backgroud/Skybox
+                break;
+            }
+        }
+    } 
+
+    private void setPixelColor(int x, int y, Color color){
+        // TODO: set the mirror pixel color as reflected color
     }
 
     private LineRenderer createLineRendComp(int x, int y){

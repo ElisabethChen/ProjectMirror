@@ -6,13 +6,11 @@ using UnityEngine;
 [RequireComponent(typeof(LineRenderer))]
 public class TestScript : MonoBehaviour
 {
-    public int reflections;
+    public int maxBounces;
     public float maxLength;
 
     private LineRenderer lineRenderer;
     private Ray ray;
-    private RaycastHit hit;
-    private Vector3 direction;
 
     // my variables
     float t = 0;
@@ -20,6 +18,8 @@ public class TestScript : MonoBehaviour
     int width, height;
     Vector3 camPos;
     private int mirrorMask;
+    Vector2 rayCoord;       // TODO: use recrusive to be able to reflect several mirrors
+
 
 
     // Start is called before the first frame update
@@ -35,122 +35,104 @@ public class TestScript : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        drawRays2();
-
+        castAllRays();
     }
-    private void drawRays()     // original, draw one ray per frame 
+
+    private void setPixelColor(RaycastHit hit, Color color)
     {
-        // GOING THROUGH ALL SCREEN PIXEL
-        increaseScreen();
-        Debug.Log("x: " + x + ", y: " + y);
+        // TODO: set the mirror pixel color as the reflected color
+    }
+
+
+    private void castAllRays()    // first recrusive iteration
+    {
+        // increaseScreen();
+        // Debug.Log("x: " + x + ", y: " + y);
+
+        // DEBUG: test one ray
+        // hitting red cube: x=175, y=200
+        // reflection blue cube: x=100, y=200
+        x = 100;
+        y = 200;
+        // DEBUG: test code for line
+        lineRenderer.positionCount = 1;
+        lineRenderer.SetPosition(0, camPos);
+
         ray = Camera.main.ScreenPointToRay(new Vector3(x, y, 0));
-
-        lineRenderer.positionCount = 1;
-        lineRenderer.SetPosition(0, camPos);
-        float remainingLength = maxLength;
-
-        for (int i = 0; i < reflections; i++)
+        RaycastHit hit;
+        // NOTE: does not use layer for Physics.Raycast() since it can´t detect 
+        //       if the ray hit some other object before hitting the mirror
+        if (Physics.Raycast(ray.origin, ray.direction, out hit, maxLength))
         {
-            if (Physics.Raycast(ray.origin, ray.direction, out hit, remainingLength, mirrorMask))
-            {
-                lineRenderer.positionCount += 1;
-                lineRenderer.SetPosition(lineRenderer.positionCount - 1, hit.point);
-                if (hit.collider.tag != "Mirror")
-                    break;
-                remainingLength -= Vector3.Distance(ray.origin, hit.point);
-                ray = new Ray(hit.point, Vector3.Reflect(ray.direction, hit.normal));
-            }
-            else
-            {
-                lineRenderer.positionCount += 1;
-                lineRenderer.SetPosition(lineRenderer.positionCount - 1, ray.origin + ray.direction * remainingLength);
-            }
-        }
-    }
-
-    private void drawRays2()    // using for-loop
-    {
-        // GOING THROUGH ALL SCREEN PIXEL
-        increaseScreen();
-        Debug.Log("x: " + x + ", y: " + y);
-        ray = Camera.main.ScreenPointToRay(new Vector3(x, y, 0));
-
-        lineRenderer.positionCount = 1;
-        lineRenderer.SetPosition(0, camPos);
-        float remainingLength = maxLength;
-        Color pixelColor;
-
-        for (int i = 0; i < reflections; i++)
-        {
-            if (Physics.Raycast(ray.origin, ray.direction, out hit, remainingLength))
-            {
-                lineRenderer.positionCount += 1;
-                lineRenderer.SetPosition(lineRenderer.positionCount - 1, hit.point);
-                if (hit.collider.tag == "Mirror")
-                {
-                    remainingLength -= Vector3.Distance(ray.origin, hit.point);
-                    ray = new Ray(hit.point, Vector3.Reflect(ray.direction, hit.normal));
-                    Debug.Log("hit mirror");
-                }
-                else
-                {
-                    pixelColor = new Color(1, 0, 0);    // TODO: set object color
-                    setPixelColor(x, y, pixelColor);
-                    Debug.Log("ray hit a object");
-                    break;
-                }
-            } else
-            {
-                 lineRenderer.positionCount += 1;
-                lineRenderer.SetPosition(lineRenderer.positionCount - 1, ray.origin + ray.direction * remainingLength);
-                if (i == 0)     // the ray from the camera did not hit any object
-                {
-                    Debug.Log("First ray did not hit any object");
-                    break;
-                }
-                Debug.Log("reflection did not hit any object");
-                // if the ray is a reflection of a mirror, then:
-                // TODO: set the pixel color as the backgroud/Skybox
-                break;
-            }
-        }
-    }
-
-    private void setPixelColor(int x, int y, Color color){
-        // TODO: set the mirror pixel color as reflected color
-    }
-
-    /* USING IN THIS WAY:
-    ray = Camera.main.ScreenPointToRay(new Vector3(x, y, 0));
-    drawRays3(ray, rayLength, reflections);
-     */
-    private void drawRays3(Ray ray, float remainingLength, int bounces)    // recrusive
-    {
-        // NOTE: NOT DONE
-        // GOING THROUGH ALL SCREEN PIXEL
-        increaseScreen();
-        Debug.Log("x: " + x + ", y: " + y);
-
-        lineRenderer.positionCount = 1;
-        lineRenderer.SetPosition(0, camPos);
-        // float remainingLength = maxLength;
-        Color pixelColor;
-
-        if (Physics.Raycast(ray.origin, ray.direction, out hit, remainingLength))
-        {
+            // DEBUG: test code for line
             lineRenderer.positionCount += 1;
             lineRenderer.SetPosition(lineRenderer.positionCount - 1, hit.point);
+
+            if (hit.collider.tag == "Mirror")   
+            {
+                float remainingLength = maxLength - Vector3.Distance(ray.origin, hit.point);
+                Color color = recRayRef(hit, remainingLength, maxBounces - 1);
+                Debug.Log("fist ray hit mirror");
+                setPixelColor(hit, color);
+            }
+        }
+        else
+        {
+            Debug.Log("first ray did not hit mirror");
+
+            // DEBUG: test code for line
+            lineRenderer.positionCount += 1;
+            lineRenderer.SetPosition(lineRenderer.positionCount - 1, ray.origin + ray.direction * maxLength);
+        }
+
+    }
+    // private Color recRayRef(Ray ray, float length, int bounces)    // recrusive
+    private Color recRayRef(RaycastHit hit, float length, int bounces)    // recrusive
+    {
+        // NOTE: NOT DONE
+        if (bounces <= 0)
+        {
+            // stop the function because exceeding number of bounces
+            // draw background color
+            return new Color(0, 1, 0);  // green background // TODO: change to background color   
+        }
+
+        ray = new Ray(hit.point, Vector3.Reflect(ray.direction, hit.normal));
+        Color pixelColor = new Color(0, 0, 0);  // black
+        if (Physics.Raycast(ray.origin, ray.direction, out hit, length))
+        {
+            // DEBUG: line code
+            lineRenderer.positionCount += 1;
+            lineRenderer.SetPosition(lineRenderer.positionCount - 1, hit.point);
+
             if (hit.collider.tag == "Mirror")
             {
-                remainingLength -= Vector3.Distance(ray.origin, hit.point);
-                ray = new Ray(hit.point, Vector3.Reflect(ray.direction, hit.normal));
-                drawRays3(ray, remainingLength, bounces-1);
+                Debug.Log("hit mirror");
+                length -= Vector3.Distance(ray.origin, hit.point);
+                pixelColor = recRayRef(hit, length, bounces - 1);
             }
             else
             {
-                pixelColor = new Color(1, 0, 0);
+                // DEBUG: line code
+                lineRenderer.positionCount += 1;
+                lineRenderer.SetPosition(lineRenderer.positionCount - 1, hit.point);
+
+                Debug.Log("reflected ray hit a object");
+                pixelColor = new Color(0, 1, 1);    // cyan = object // TODO: set object color
             }
         }
+        else
+        {
+            Debug.Log("reflected ray didn't hit any object");
+            // TODO: set the pixel color as the backgroud/Skybox
+            pixelColor = new Color(0, 1, 0);    // green background
+            lineRenderer.positionCount += 1;
+            lineRenderer.SetPosition(lineRenderer.positionCount - 1, ray.origin + ray.direction * length);
+
+        }
+        setPixelColor(hit, pixelColor);
+
+        return pixelColor;
     }
 
     void increaseScreen()   // increase x and y coordinate for the screen
@@ -165,7 +147,7 @@ public class TestScript : MonoBehaviour
         else if (y < height - 1)
         {
             x = 0;
-            y += 10;
+            y += 20;
         }
         // }
     }

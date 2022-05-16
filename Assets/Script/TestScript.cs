@@ -14,7 +14,7 @@ public class TestScript : MonoBehaviour
 
     // my variables
     float t = 0;
-    int x = 0, y = 0;
+    int x = 0, y = 200;
     int width, height;
     Vector3 camPos;
     private int mirrorMask;
@@ -41,19 +41,34 @@ public class TestScript : MonoBehaviour
     private void setPixelColor(RaycastHit hit, Color color)
     {
         // TODO: set the mirror pixel color as the reflected color
+        if (hit.collider == null)
+        {
+            Debug.Log("col is null");
+        }
+        Renderer hitRend = hit.collider.GetComponent<Renderer>();
+        Texture2D hitTex = (Texture2D) hitRend.material.mainTexture;
+        Vector2 texCoord = hit.textureCoord;
+        texCoord.x *= hitTex.width;
+        texCoord.y *= hitTex.height;
+        // Debug.Log(texCoord.x);
+        hitTex.SetPixel(Mathf.FloorToInt(texCoord.x ) , Mathf.FloorToInt(texCoord.y), color);
+        hitTex.Apply();
+        Debug.Log("x: " + texCoord.x + ", y: " + texCoord.y);
+        // hitTex.SetPixel(texCoord.x, texCoord.y, color);
     }
 
 
     private void castAllRays()    // first recrusive iteration
     {
-        // increaseScreen();
-        // Debug.Log("x: " + x + ", y: " + y);
+        increaseScreen();
+        // // Debug.Log("x: " + x + ", y: " + y);
 
         // DEBUG: test one ray
         // hitting red cube: x=175, y=200
-        // reflection blue cube: x=100, y=200
-        x = 100;
-        y = 200;
+        // reflection hit blue cube: x=100, y=200
+        // reflection hit nothing: x=160, y=160
+        // x = 100;
+        // y = 150;
         // DEBUG: test code for line
         lineRenderer.positionCount = 1;
         lineRenderer.SetPosition(0, camPos);
@@ -72,13 +87,13 @@ public class TestScript : MonoBehaviour
             {
                 float remainingLength = maxLength - Vector3.Distance(ray.origin, hit.point);
                 Color color = recRayRef(hit, remainingLength, maxBounces - 1);
-                Debug.Log("fist ray hit mirror");
+                // Debug.Log("fist ray hit mirror");
                 setPixelColor(hit, color);
             }
         }
         else
         {
-            Debug.Log("first ray did not hit mirror");
+            // Debug.Log("first ray did not hit mirror");
 
             // DEBUG: test code for line
             lineRenderer.positionCount += 1;
@@ -107,9 +122,10 @@ public class TestScript : MonoBehaviour
 
             if (hit.collider.tag == "Mirror")
             {
-                Debug.Log("hit mirror");
+                // // Debug.Log("hit mirror");
                 length -= Vector3.Distance(ray.origin, hit.point);
                 pixelColor = recRayRef(hit, length, bounces - 1);
+                setPixelColor(hit, pixelColor);
             }
             else
             {
@@ -117,20 +133,18 @@ public class TestScript : MonoBehaviour
                 lineRenderer.positionCount += 1;
                 lineRenderer.SetPosition(lineRenderer.positionCount - 1, hit.point);
 
-                Debug.Log("reflected ray hit a object");
+                // Debug.Log("reflected ray hit a object");
                 pixelColor = new Color(0, 1, 1);    // cyan = object // TODO: set object color
             }
         }
         else
         {
-            Debug.Log("reflected ray didn't hit any object");
+            // Debug.Log("reflected ray didn't hit any object");
             // TODO: set the pixel color as the backgroud/Skybox
             pixelColor = new Color(0, 1, 0);    // green background
             lineRenderer.positionCount += 1;
             lineRenderer.SetPosition(lineRenderer.positionCount - 1, ray.origin + ray.direction * length);
-
         }
-        setPixelColor(hit, pixelColor);
 
         return pixelColor;
     }
@@ -147,7 +161,7 @@ public class TestScript : MonoBehaviour
         else if (y < height - 1)
         {
             x = 0;
-            y += 20;
+            y += 1;
         }
         // }
     }

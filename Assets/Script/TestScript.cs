@@ -14,12 +14,12 @@ public class TestScript : MonoBehaviour
 
     // my variables
     float t = 0;
-    int x = 0, y = 200;
+    int x = 30, y = 200;
     int width, height;
     Vector3 camPos;
     private int mirrorMask;
     Vector2 rayCoord;       // TODO: use recrusive to be able to reflect several mirrors
-
+    int sxx = 0, syy = 0, xx = 0, yy = 0, exx = 100, eyy = 100;     // DEBUG: TEST VARIABLES
 
 
     // Start is called before the first frame update
@@ -30,6 +30,7 @@ public class TestScript : MonoBehaviour
         width = Camera.main.pixelWidth;
         height = Camera.main.pixelHeight;
         mirrorMask = LayerMask.GetMask("mirrorLayer");
+        setXXYY(0, 0, 100, 100);
     }
 
     // Update is called once per frame
@@ -41,20 +42,45 @@ public class TestScript : MonoBehaviour
     private void setPixelColor(RaycastHit hit, Color color)
     {
         // TODO: set the mirror pixel color as the reflected color
-        if (hit.collider == null)
-        {
-            Debug.Log("col is null");
-        }
         Renderer hitRend = hit.collider.GetComponent<Renderer>();
-        Texture2D hitTex = (Texture2D) hitRend.material.mainTexture;
-        Vector2 texCoord = hit.textureCoord;
-        texCoord.x *= hitTex.width;
-        texCoord.y *= hitTex.height;
+        Texture2D hitTex = (Texture2D)hitRend.material.mainTexture;
+        Vector2 texCoord = hit.textureCoord2;
+        // texCoord.x *= hitTex.width;
+        // texCoord.y *= hitTex.height;
         // Debug.Log(texCoord.x);
-        hitTex.SetPixel(Mathf.FloorToInt(texCoord.x ) , Mathf.FloorToInt(texCoord.y), color);
-        hitTex.Apply();
-        Debug.Log("x: " + texCoord.x + ", y: " + texCoord.y);
-        // hitTex.SetPixel(texCoord.x, texCoord.y, color);
+        // hitTex.SetPixel((int) texCoord.x, (int)texCoord.y, color);
+        // hitTex.SetPixel((int) texCoord.x, (int)texCoord.y, new Color(1, 1, 0));
+        incXXYY();
+        hitTex.SetPixel(xx, yy, new Color(0, 0, 0));
+        // hitTex.Apply();
+        // Debug.Log("x: " + hitTex.width + ", y: " + hitTex.height);
+        // Debug.Log(hit.collider);
+        // Debug.Log("x: " + texCoord.x + ", y: " + texCoord.y);
+        // Debug.Log("x: " + x + ", y: " + y);
+        Debug.Log("x: " + xx + ", y: " + yy);
+    }
+
+    private void setXXYY(int startX, int startY, int lengthX, int lengthY)
+    {
+        sxx = startX;
+        syy = startY;
+        xx = startX;
+        yy = startY;
+        exx = startX + lengthX;
+        eyy = startY + lengthY;
+    }
+
+    private void incXXYY()
+    {
+        if (xx < exx)
+        {
+            xx += 1;
+        }
+        else if (yy < eyy)
+        {
+            xx = sxx;
+            yy += 1;
+        }
     }
 
 
@@ -83,7 +109,7 @@ public class TestScript : MonoBehaviour
             lineRenderer.positionCount += 1;
             lineRenderer.SetPosition(lineRenderer.positionCount - 1, hit.point);
 
-            if (hit.collider.tag == "Mirror")   
+            if (hit.collider.tag == "Mirror")
             {
                 float remainingLength = maxLength - Vector3.Distance(ray.origin, hit.point);
                 Color color = recRayRef(hit, remainingLength, maxBounces - 1);

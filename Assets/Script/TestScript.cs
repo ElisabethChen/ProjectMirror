@@ -211,9 +211,27 @@ public class TestScript : MonoBehaviour
                 // DEBUG: line code
                 lineRenderer.positionCount += 1;
                 lineRenderer.SetPosition(lineRenderer.positionCount - 1, hit.point);
+                
+                // Kopierad Kod:
+                Renderer renderer = hit.transform.GetComponent<MeshRenderer>();
+                MeshCollider meshCollider = hit.collider as MeshCollider;
+                Texture2D texture2D = renderer.material.mainTexture as Texture2D;
+                
+                if(texture2D == null){
+                    // If a reflected ray hits a material without a texture, set the color of said material to its color:
+                    pixelColor = renderer.material.color;
+                }
+                else{
+                    // TODO (low priority): Handle color changes if mirror reflected ray hits a texture  
+                    pixelColor = new Color(0, 1, 1); 
+                    //Debug.Log(texture2D);
+                    //Vector2 pCoord = hit.textureCoord;
+                    //pCoord.x *= texture2D.width;
+                    //pCoord.y *= texture2D.height;
+                    //Vector2 tiling = renderer.material.mainTextureScale;
+                    //Color color = texture2D.GetPixel(Mathf.FloorToInt(pCoord.x * tiling.x) , Mathf.FloorToInt(pCoord.y * tiling.y));
+                }
 
-                // Debug.Log("reflected ray hit a object");
-                pixelColor = new Color(1, 0, 0);    // red = object // TODO: set object color
             }
         }
         else

@@ -41,7 +41,7 @@ public class TestScript : MonoBehaviour
 
     private void setPixelColor(RaycastHit hit, Color color)
     {
-        color = new Color(1, 0, 1);
+        //color = new Color(1, 1, 1);
         // TODO: set the mirror pixel color as the reflected color
         Renderer hitRend = hit.collider.GetComponent<Renderer>();
         Texture2D hitTex = (Texture2D)hitRend.material.mainTexture;
@@ -63,7 +63,7 @@ public class TestScript : MonoBehaviour
         hitTex.Apply();
         // Debug.Log("x: " + hitTex.width + ", y: " + hitTex.height);
         // Debug.Log(hit.collider);
-        Debug.Log("x: " + texCoord.x + ", y: " + texCoord.y);
+        //Debug.Log("x: " + texCoord.x + ", y: " + texCoord.y);
         // Debug.Log("x: " + x + ", y: " + y);
         // Debug.Log("x: " + xx + ", y: " + yy);
     }
@@ -166,9 +166,27 @@ public class TestScript : MonoBehaviour
                 // DEBUG: line code
                 lineRenderer.positionCount += 1;
                 lineRenderer.SetPosition(lineRenderer.positionCount - 1, hit.point);
+                
+                // Kopierad Kod:
+                Renderer renderer = hit.transform.GetComponent<MeshRenderer>();
+                MeshCollider meshCollider = hit.collider as MeshCollider;
+                Texture2D texture2D = renderer.material.mainTexture as Texture2D;
+                
+                if(texture2D == null){
+                    // If a reflected ray hits a material without a texture, set the color of said material to its color:
+                    pixelColor = renderer.material.color;
+                }
+                else{
+                    // TODO (low priority): Handle color changes if mirror reflected ray hits a texture  
+                    pixelColor = new Color(0, 1, 1); 
+                    //Debug.Log(texture2D);
+                    //Vector2 pCoord = hit.textureCoord;
+                    //pCoord.x *= texture2D.width;
+                    //pCoord.y *= texture2D.height;
+                    //Vector2 tiling = renderer.material.mainTextureScale;
+                    //Color color = texture2D.GetPixel(Mathf.FloorToInt(pCoord.x * tiling.x) , Mathf.FloorToInt(pCoord.y * tiling.y));
+                }
 
-                // Debug.Log("reflected ray hit a object");
-                pixelColor = new Color(0, 1, 1);    // cyan = object // TODO: set object color
             }
         }
         else

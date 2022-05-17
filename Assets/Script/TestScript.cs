@@ -30,7 +30,7 @@ public class TestScript : MonoBehaviour
         width = Camera.main.pixelWidth;
         height = Camera.main.pixelHeight;
         mirrorMask = LayerMask.GetMask("mirrorLayer");
-        setXXYY(0, 0, 100, 100);
+        setXXYY(0, 0, 512, 1024);
     }
 
     // Update is called once per frame
@@ -41,23 +41,31 @@ public class TestScript : MonoBehaviour
 
     private void setPixelColor(RaycastHit hit, Color color)
     {
+        color = new Color(1, 0, 1);
         // TODO: set the mirror pixel color as the reflected color
         Renderer hitRend = hit.collider.GetComponent<Renderer>();
         Texture2D hitTex = (Texture2D)hitRend.material.mainTexture;
-        Vector2 texCoord = hit.textureCoord2;
-        // texCoord.x *= hitTex.width;
-        // texCoord.y *= hitTex.height;
+        Vector2 texCoord = hit.textureCoord;
+        texCoord.x *= hitTex.width;
+        texCoord.y *= hitTex.height;
         // Debug.Log(texCoord.x);
+        hitTex.SetPixel(Mathf.FloorToInt(texCoord.x), Mathf.FloorToInt(texCoord.y), color);
+        hitTex.SetPixel(Mathf.FloorToInt(texCoord.x+1), Mathf.FloorToInt(texCoord.y), color);
+        hitTex.SetPixel(Mathf.FloorToInt(texCoord.x), Mathf.FloorToInt(texCoord.y+1), color);
+        hitTex.SetPixel(Mathf.FloorToInt(texCoord.x+1), Mathf.FloorToInt(texCoord.y+1), color);
+        hitTex.SetPixel(Mathf.FloorToInt(texCoord.x-1), Mathf.FloorToInt(texCoord.y), color);
+        hitTex.SetPixel(Mathf.FloorToInt(texCoord.x), Mathf.FloorToInt(texCoord.y-1), color);
+        hitTex.SetPixel(Mathf.FloorToInt(texCoord.x-1), Mathf.FloorToInt(texCoord.y-1), color);
         // hitTex.SetPixel((int) texCoord.x, (int)texCoord.y, color);
         // hitTex.SetPixel((int) texCoord.x, (int)texCoord.y, new Color(1, 1, 0));
         incXXYY();
-        hitTex.SetPixel(xx, yy, new Color(0, 0, 0));
-        // hitTex.Apply();
+        // hitTex.SetPixel(xx, yy, new Color(1, 0, 0));
+        hitTex.Apply();
         // Debug.Log("x: " + hitTex.width + ", y: " + hitTex.height);
         // Debug.Log(hit.collider);
-        // Debug.Log("x: " + texCoord.x + ", y: " + texCoord.y);
+        Debug.Log("x: " + texCoord.x + ", y: " + texCoord.y);
         // Debug.Log("x: " + x + ", y: " + y);
-        Debug.Log("x: " + xx + ", y: " + yy);
+        // Debug.Log("x: " + xx + ", y: " + yy);
     }
 
     private void setXXYY(int startX, int startY, int lengthX, int lengthY)

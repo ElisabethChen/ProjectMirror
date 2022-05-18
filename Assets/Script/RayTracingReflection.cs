@@ -12,7 +12,8 @@ public class RayTracingReflection : MonoBehaviour
     private int mirrorMask;
     private int width, height;
     private Vector3 camPos;
-    private RaycastHit hit;
+    private Ray ray;
+
 
     // Start is called before the first frame update
     void Start()
@@ -45,18 +46,91 @@ public class RayTracingReflection : MonoBehaviour
         // }
     }
 
-    private void castAllRays(){
+    private void castAllRays()
+    {
         for (int y = 0; y < height; y++)
         {
             for (int x = 0; x < width; x++)
             {
-                forRayTracing(x, y);
+                // forRayTracing(x, y);
 
+                ray = Camera.main.ScreenPointToRay(new Vector3(x, y, 0));
+                RaycastHit hit;
+                // NOTE: does not use layer for Physics.Raycast() since it can´t detect 
+                //       if the ray hit some other object before hitting the mirror
+                if (Physics.Raycast(ray.origin, ray.direction, out hit, rayLength))
+                {
+                    // DEBUG: test code for line
+                    if (hit.collider.tag == "Mirror")
+                    {
+                        float remainingLength = rayLength - Vector3.Distance(ray.origin, hit.point);
+                        Color color = recRayRef(hit, remainingLength, maxBounces - 1);
+                        // Debug.Log("fist ray hit mirror");
+                        setPixelColor(hit, color);
+                    }
+                }
             }
         }
     }
 
-    private void forRayTracing(int x, int y){
+    private Color recRayRef(RaycastHit hit, float length, int bounces)    // recrusive
+    {
+        // NOTE: NOT DONE
+        if (bounces <= 0)
+        {
+            // stop the function because exceeding number of bounces
+            // draw background color
+            return new Color(0, 1, 0);  // green background // TODO: change to background color   
+        }
+
+        ray = new Ray(hit.point, Vector3.Reflect(ray.direction, hit.normal));
+        Color pixelColor = new Color(0, 0, 0);  // black
+        if (Physics.Raycast(ray.origin, ray.direction, out hit, length))
+        {
+            if (hit.collider.tag == "Mirror")
+            {
+                // // Debug.Log("hit mirror");
+                length -= Vector3.Distance(ray.origin, hit.point);
+                pixelColor = recRayRef(hit, length, bounces - 1);
+                setPixelColor(hit, pixelColor);
+            }
+            else
+            {
+                // Kopierad Kod:
+                Renderer renderer = hit.transform.GetComponent<MeshRenderer>();
+                MeshCollider meshCollider = hit.collider as MeshCollider;
+                Texture2D texture2D = renderer.material.mainTexture as Texture2D;
+                
+                if(texture2D == null){
+                    // If a reflected ray hits a material without a texture, set the color of said material to its color:
+                    pixelColor = renderer.material.color;
+                }
+                else{
+                    // TODO (low priority): Handle color changes if mirror reflected ray hits a texture  
+                    pixelColor = new Color(0, 1, 1);    // cyan
+                    //Debug.Log(texture2D);
+                    //Vector2 pCoord = hit.textureCoord;
+                    //pCoord.x *= texture2D.width;
+                    //pCoord.y *= texture2D.height;
+                    //Vector2 tiling = renderer.material.mainTextureScale;
+                    //Color color = texture2D.GetPixel(Mathf.FloorToInt(pCoord.x * tiling.x) , Mathf.FloorToInt(pCoord.y * tiling.y));
+                }
+
+            }
+        }
+        else
+        {
+            // Debug.Log("reflected ray didn't hit any object");
+            // TODO: set the pixel color as the backgroud/Skybox
+            pixelColor = new Color(0, 1, 0);    // green background
+        }
+
+        return pixelColor;
+    }
+
+
+    private void forRayTracing(int x, int y)
+    {
         // test code for line
         // LineRenderer lRend = createLineRendComp(x, y);
         // lRend.positionCount = 1;
@@ -65,6 +139,7 @@ public class RayTracingReflection : MonoBehaviour
         Color pixelColor;
         float length = rayLength;
         Ray ray = Camera.main.ScreenPointToRay(new Vector3(x, y, 0));
+        RaycastHit hit;
 
         for (int i = 0; i < maxBounces; i++)
         {
@@ -72,7 +147,7 @@ public class RayTracingReflection : MonoBehaviour
             {
                 // lRend.positionCount += 1;
                 // lRend.SetPosition(lRend.positionCount - 1, hit.point);
-                Renderer tex = (Renderer) hit.collider.gameObject.GetComponent<MeshRenderer>();
+                Renderer tex = (Renderer)hit.collider.gameObject.GetComponent<MeshRenderer>();
                 if (hit.collider.tag == "Mirror")
                 {
                     length -= Vector3.Distance(ray.origin, hit.point);
@@ -82,11 +157,12 @@ public class RayTracingReflection : MonoBehaviour
                 else
                 {
                     pixelColor = new Color(1, 0, 0);    // TODO: set object color
-                    setPixelColor(x, y, pixelColor);
+                    setPixelColor(hit, pixelColor);
                     // Debug.Log("ray hit a object");
                     break;
                 }
-            } else
+            }
+            else
             {
                 // lRend.positionCount += 1;
                 // lRend.SetPosition(lRend.positionCount - 1, ray.origin + ray.direction * remainingLength);
@@ -101,14 +177,38 @@ public class RayTracingReflection : MonoBehaviour
                 break;
             }
         }
-    } 
-
-    private void setPixelColor(int x, int y, Color color){
-
-        // TODO: set the mirror pixel color as reflected color
     }
 
-    private LineRenderer createLineRendComp(int x, int y){
+    private void setPixelColor(RaycastHit hit, Color color)
+    {
+
+        // TODO: set the mirror pixel color as reflected color
+        // color = new Color(1, 0, 1);
+        Renderer hitRend = hit.collider.GetComponent<Renderer>();
+        Texture2D hitTex = (Texture2D)hitRend.material.mainTexture;
+        Vector2 texCoord = hit.textureCoord;
+        texCoord.x *= hitTex.width;
+        texCoord.y *= hitTex.height;
+        // Debug.Log(texCoord.x);
+        hitTex.SetPixel(Mathf.FloorToInt(texCoord.x), Mathf.FloorToInt(texCoord.y), color);
+        hitTex.SetPixel(Mathf.FloorToInt(texCoord.x + 1), Mathf.FloorToInt(texCoord.y), color);
+        hitTex.SetPixel(Mathf.FloorToInt(texCoord.x), Mathf.FloorToInt(texCoord.y + 1), color);
+        hitTex.SetPixel(Mathf.FloorToInt(texCoord.x + 1), Mathf.FloorToInt(texCoord.y + 1), color);
+        hitTex.SetPixel(Mathf.FloorToInt(texCoord.x - 1), Mathf.FloorToInt(texCoord.y), color);
+        hitTex.SetPixel(Mathf.FloorToInt(texCoord.x), Mathf.FloorToInt(texCoord.y - 1), color);
+        hitTex.SetPixel(Mathf.FloorToInt(texCoord.x - 1), Mathf.FloorToInt(texCoord.y - 1), color);
+        // hitTex.SetPixel((int) texCoord.x, (int)texCoord.y, color);
+        // hitTex.SetPixel((int) texCoord.x, (int)texCoord.y, new Color(1, 1, 0));
+        // hitTex.SetPixel(xx, yy, new Color(1, 0, 0));
+        hitTex.Apply();
+        // Debug.Log("x: " + hitTex.width + ", y: " + hitTex.height);
+        // Debug.Log(hit.collider);
+        Debug.Log("x: " + texCoord.x + ", y: " + texCoord.y);
+        // Debug.Log("x: " + xx + ", y: " + yy);
+    }
+
+    private LineRenderer createLineRendComp(int x, int y)
+    {
         GameObject gObject = new GameObject("LineGameObject" + x + y);
 
         LineRenderer lRend = gObject.AddComponent<LineRenderer>();

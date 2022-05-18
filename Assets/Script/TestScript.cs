@@ -51,12 +51,12 @@ public class TestScript : MonoBehaviour
         texCoord.y *= hitTex.height;
         // Debug.Log(texCoord.x);
         hitTex.SetPixel(Mathf.FloorToInt(texCoord.x), Mathf.FloorToInt(texCoord.y), color);
-        // hitTex.SetPixel(Mathf.FloorToInt(texCoord.x + 1), Mathf.FloorToInt(texCoord.y), color);
-        // hitTex.SetPixel(Mathf.FloorToInt(texCoord.x), Mathf.FloorToInt(texCoord.y + 1), color);
-        // hitTex.SetPixel(Mathf.FloorToInt(texCoord.x + 1), Mathf.FloorToInt(texCoord.y + 1), color);
-        // hitTex.SetPixel(Mathf.FloorToInt(texCoord.x - 1), Mathf.FloorToInt(texCoord.y), color);
-        // hitTex.SetPixel(Mathf.FloorToInt(texCoord.x), Mathf.FloorToInt(texCoord.y - 1), color);
-        // hitTex.SetPixel(Mathf.FloorToInt(texCoord.x - 1), Mathf.FloorToInt(texCoord.y - 1), color);
+        hitTex.SetPixel(Mathf.FloorToInt(texCoord.x + 1), Mathf.FloorToInt(texCoord.y), color);
+        hitTex.SetPixel(Mathf.FloorToInt(texCoord.x), Mathf.FloorToInt(texCoord.y + 1), color);
+        hitTex.SetPixel(Mathf.FloorToInt(texCoord.x + 1), Mathf.FloorToInt(texCoord.y + 1), color);
+        hitTex.SetPixel(Mathf.FloorToInt(texCoord.x - 1), Mathf.FloorToInt(texCoord.y), color);
+        hitTex.SetPixel(Mathf.FloorToInt(texCoord.x), Mathf.FloorToInt(texCoord.y - 1), color);
+        hitTex.SetPixel(Mathf.FloorToInt(texCoord.x - 1), Mathf.FloorToInt(texCoord.y - 1), color);
         // hitTex.SetPixel((int) texCoord.x, (int)texCoord.y, color);
         // hitTex.SetPixel((int) texCoord.x, (int)texCoord.y, new Color(1, 1, 0));
         incXXYY();
@@ -101,8 +101,8 @@ public class TestScript : MonoBehaviour
         // hitting red cube: x=175, y=200
         // reflection hit blue cube: x=100, y=200
         // reflection hit nothing: x=160, y=160
-        // x = 100;
-        // y = 150;
+        x = 100;
+        y = 150;
         // DEBUG: test code for line
         lineRenderer.positionCount = 1;
         lineRenderer.SetPosition(0, camPos);
@@ -223,7 +223,7 @@ public class TestScript : MonoBehaviour
                 }
                 else{
                     // TODO (low priority): Handle color changes if mirror reflected ray hits a texture  
-                    pixelColor = new Color(0, 1, 1); 
+                    pixelColor = new Color(0, 1, 1);    // cyan
                     //Debug.Log(texture2D);
                     //Vector2 pCoord = hit.textureCoord;
                     //pCoord.x *= texture2D.width;

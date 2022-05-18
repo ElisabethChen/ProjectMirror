@@ -14,7 +14,7 @@ public class TestScript : MonoBehaviour
 
     // my variables
     float t = 0;
-    int x = 0, y = 50;
+    int x = 0, y = 200;
     int width, height;
     Vector3 camPos;
     private int mirrorMask;
@@ -42,7 +42,7 @@ public class TestScript : MonoBehaviour
 
     private void setPixelColor(RaycastHit hit, Color color)
     {
-        // color = new Color(1, 0, 1);
+        // color = new Color(1, 1, 1);     //DEBUG: reset color
         // TODO: set the mirror pixel color as the reflected color
         Renderer hitRend = hit.collider.GetComponent<Renderer>();
         Texture2D hitTex = (Texture2D)hitRend.material.mainTexture;
@@ -101,8 +101,8 @@ public class TestScript : MonoBehaviour
         // hitting red cube: x=175, y=200
         // reflection hit blue cube: x=100, y=200
         // reflection hit nothing: x=160, y=160
-        x = 100;
-        y = 150;
+        // x = 100;
+        // y = 150;
         // DEBUG: test code for line
         lineRenderer.positionCount = 1;
         lineRenderer.SetPosition(0, camPos);

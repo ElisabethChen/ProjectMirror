@@ -54,18 +54,18 @@ public class TestScript : MonoBehaviour
         hitTex.SetPixel(Mathf.FloorToInt(texCoord.x + 1), Mathf.FloorToInt(texCoord.y), color);
         hitTex.SetPixel(Mathf.FloorToInt(texCoord.x), Mathf.FloorToInt(texCoord.y + 1), color);
         hitTex.SetPixel(Mathf.FloorToInt(texCoord.x + 1), Mathf.FloorToInt(texCoord.y + 1), color);
-        hitTex.SetPixel(Mathf.FloorToInt(texCoord.x - 1), Mathf.FloorToInt(texCoord.y), color);
-        hitTex.SetPixel(Mathf.FloorToInt(texCoord.x), Mathf.FloorToInt(texCoord.y - 1), color);
-        hitTex.SetPixel(Mathf.FloorToInt(texCoord.x - 1), Mathf.FloorToInt(texCoord.y - 1), color);
-        // hitTex.SetPixel((int) texCoord.x, (int)texCoord.y, color);
-        // hitTex.SetPixel((int) texCoord.x, (int)texCoord.y, new Color(1, 1, 0));
+        // hitTex.SetPixel(Mathf.FloorToInt(texCoord.x - 1), Mathf.FloorToInt(texCoord.y), color);
+        // hitTex.SetPixel(Mathf.FloorToInt(texCoord.x), Mathf.FloorToInt(texCoord.y - 1), color);
+        // hitTex.SetPixel(Mathf.FloorToInt(texCoord.x - 1), Mathf.FloorToInt(texCoord.y - 1), color);
+        // hitTex.SetPixel(Mathf.FloorToInt(texCoord.x+1), Mathf.FloorToInt(texCoord.y - 1), color);
+        // hitTex.SetPixel(Mathf.FloorToInt(texCoord.x - 1), Mathf.FloorToInt(texCoord.y + 1), color);
         incXXYY();
         // hitTex.SetPixel(xx, yy, new Color(1, 0, 0));
         hitTex.Apply();
         // Debug.Log("x: " + hitTex.width + ", y: " + hitTex.height);
         // Debug.Log(hit.collider);
-        Debug.Log("x: " + texCoord.x + ", y: " + texCoord.y);
-        Debug.Log("x: " + x + ", y: " + y);
+        // Debug.Log("x: " + texCoord.x + ", y: " + texCoord.y);
+        // Debug.Log("x: " + x + ", y: " + y);
         // Debug.Log("x: " + xx + ", y: " + yy);
     }
 
@@ -135,7 +135,7 @@ public class TestScript : MonoBehaviour
         }
 
     }
-    
+
     // private Color recRayRef(Ray ray, float length, int bounces)    // recrusive
     private void castRaysToMirrors()
     {
@@ -180,7 +180,7 @@ public class TestScript : MonoBehaviour
         }
 
     }
-    
+
     private Color recRayRef(RaycastHit hit, float length, int bounces)    // recrusive
     {
         // NOTE: NOT DONE
@@ -211,26 +211,9 @@ public class TestScript : MonoBehaviour
                 // DEBUG: line code
                 lineRenderer.positionCount += 1;
                 lineRenderer.SetPosition(lineRenderer.positionCount - 1, hit.point);
-                
+
                 // Kopierad Kod:
-                Renderer renderer = hit.transform.GetComponent<MeshRenderer>();
-                MeshCollider meshCollider = hit.collider as MeshCollider;
-                Texture2D texture2D = renderer.material.mainTexture as Texture2D;
-                
-                if(texture2D == null){
-                    // If a reflected ray hits a material without a texture, set the color of said material to its color:
-                    pixelColor = renderer.material.color;
-                }
-                else{
-                    // TODO (low priority): Handle color changes if mirror reflected ray hits a texture  
-                    pixelColor = new Color(0, 1, 1);    // cyan
-                    //Debug.Log(texture2D);
-                    //Vector2 pCoord = hit.textureCoord;
-                    //pCoord.x *= texture2D.width;
-                    //pCoord.y *= texture2D.height;
-                    //Vector2 tiling = renderer.material.mainTextureScale;
-                    //Color color = texture2D.GetPixel(Mathf.FloorToInt(pCoord.x * tiling.x) , Mathf.FloorToInt(pCoord.y * tiling.y));
-                }
+                pixelColor = getObjectColor(hit);
 
             }
         }
@@ -238,12 +221,35 @@ public class TestScript : MonoBehaviour
         {
             // Debug.Log("reflected ray didn't hit any object");
             // TODO: set the pixel color as the backgroud/Skybox
+            Vector3 direction = ray.direction;
+            // (RenderSettings.skybox.GetTexture("Left") as Texture2D).GetPixelBilinear((direction.z/-direction.x+1)/2, (direction.y/-direction.x+1)/2);
             pixelColor = new Color(0, 1, 0);    // green background
             lineRenderer.positionCount += 1;
             lineRenderer.SetPosition(lineRenderer.positionCount - 1, ray.origin + ray.direction * length);
         }
 
         return pixelColor;
+    }
+
+    private Color getObjectColor(RaycastHit hit)
+    {
+        Renderer objRend = hit.transform.GetComponent<MeshRenderer>();
+        Texture2D objTex = objRend.material.mainTexture as Texture2D;
+        if (objTex == null)
+        {
+            // reflected ray hit an object without texture
+            return objRend.material.color;
+        }
+        else
+        {
+            // reflected ray hit an object with texture            
+            Vector2 texCoord = hit.textureCoord;
+            texCoord.x *= objTex.width;
+            texCoord.y *= objTex.height;
+            Vector2 tiling = objRend.material.mainTextureScale;
+            Color color = objTex.GetPixel(Mathf.FloorToInt(texCoord.x * tiling.x) , Mathf.FloorToInt(texCoord.y * tiling.y));
+            return color;
+        }
     }
 
     void increaseScreen()   // increase x and y coordinate for the screen

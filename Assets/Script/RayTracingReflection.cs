@@ -10,6 +10,8 @@ public class RayTracingReflection : MonoBehaviour
     public float rayLength;
     private int width, height;
     private Ray ray;
+    public bool NearestNeighborInterpolation;
+    public bool LinearInterpolation;
 
 
     // Start is called before the first frame update
@@ -17,6 +19,9 @@ public class RayTracingReflection : MonoBehaviour
     {
         width = Camera.main.pixelWidth;
         height = Camera.main.pixelHeight;
+
+        if(NearestNeighborInterpolation)
+            LinearInterpolation = false;
 
         castAllRays();
     }
@@ -48,7 +53,11 @@ public class RayTracingReflection : MonoBehaviour
 
                         // fist ray hit mirror
                         Color color = recRayRef(hit, remainingLength, maxBounces - 1);
-                        setPixelColor(hit, color);
+
+                        if(LinearInterpolation)
+                            linear_interpolation(hit, color);
+                        else
+                            nearest_neighbor_interpolation(hit, color);
                     }
                 }
             }
@@ -84,7 +93,11 @@ public class RayTracingReflection : MonoBehaviour
                 // reflected ray hit mirror
                 length -= Vector3.Distance(ray.origin, hit.point);
                 pixelColor = recRayRef(hit, length, bounces - 1);
-                setPixelColor(hit, pixelColor);
+                
+                 if(LinearInterpolation)
+                    linear_interpolation(hit, pixelColor);
+                else
+                    nearest_neighbor_interpolation(hit, pixelColor);
             }
             else
             {
@@ -107,7 +120,8 @@ public class RayTracingReflection : MonoBehaviour
     /// </summary>
     /// <param name="hit">RaycastHit object of the hitting point of the ray</param>
     /// <param name="color">the color that the hitting point should be set to</param>
-    private void setPixelColor(RaycastHit hit, Color color)
+
+    private void nearest_neighbor_interpolation(RaycastHit hit, Color color)
     {
 
         // TODO: set the mirror pixel color as reflected color
@@ -127,8 +141,23 @@ public class RayTracingReflection : MonoBehaviour
         hitTex.Apply();
     }
 
-    private void interpolation(Vector2 texCoord, Texture2D hitTex, Color color)
-    {
+    
+    /// <summary>
+    /// Linear interpolation means that we have some surrounding points to a center point P 
+    /// and those surrounding point would contribute to the colouring of P. The way that we do
+    /// this is by doing it the other way around. Instead of having P being the point that checks
+    /// its neighbor we let each point that hits the surface contribute somewhat to neighboring
+    /// points with their colour. 
+    /// </summary>
+
+    private void linear_interpolation(RaycastHit hit, Color color)
+    {   
+        Renderer hitRend = hit.collider.GetComponent<Renderer>();
+        Texture2D hitTex = (Texture2D)hitRend.material.mainTexture;
+        Vector2 texCoord = hit.textureCoord;
+        texCoord.x *= hitTex.width;
+        texCoord.y *= hitTex.height;
+
         int end_x = Mathf.FloorToInt(texCoord.x + 1);
         int start_x = Mathf.FloorToInt(texCoord.x - 1);
         int end_y = Mathf.FloorToInt(texCoord.y + 1);
@@ -138,14 +167,18 @@ public class RayTracingReflection : MonoBehaviour
         for (int i = start_x; i <= end_x; i++)
         {
             for (int j = start_y; j <= end_y; j++)
-            {
-                hitTex.SetPixel(i, j, (color / 5) + hitTex.GetPixel(i, j));
+            {   if(!(i == j))
+                    hitTex.SetPixel(i, j, (color)/4 + hitTex.GetPixel(i, j));
             }
         }
 
         int x = Mathf.FloorToInt(texCoord.x);
         int y = Mathf.FloorToInt(texCoord.y);
-        hitTex.SetPixel(x, y, color / 2 + hitTex.GetPixel(x, y) / 2);
+
+         
+        //hitTex.SetPixel(x, y, color);
+        hitTex.SetPixel(x, y, 2*color / 3 + hitTex.GetPixel(x, y) / 3);
+        hitTex.Apply();
     }
 
     /// <summary>

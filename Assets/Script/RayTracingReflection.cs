@@ -10,19 +10,13 @@ public class RayTracingReflection : MonoBehaviour
     public float rayLength;
     private int width, height;
     private Ray ray;
-    public bool NearestNeighborInterpolation;
     public bool LinearInterpolation;
-
 
     // Start is called before the first frame update
     void Start()
     {
         width = Camera.main.pixelWidth;
         height = Camera.main.pixelHeight;
-
-        if(NearestNeighborInterpolation)
-            LinearInterpolation = false;
-
         castAllRays();
     }
 
@@ -54,7 +48,7 @@ public class RayTracingReflection : MonoBehaviour
                         // fist ray hit mirror
                         Color color = recRayRef(hit, remainingLength, maxBounces - 1);
 
-                        if(LinearInterpolation)
+                        if (LinearInterpolation)
                             linear_interpolation(hit, color);
                         else
                             nearest_neighbor_interpolation(hit, color);
@@ -76,7 +70,7 @@ public class RayTracingReflection : MonoBehaviour
     /// <return>color of the hitting point of the ray</return>
     private Color recRayRef(RaycastHit hit, float length, int bounces)
     {
-        // NOTE: NOT DONE
+        ray = new Ray(hit.point, Vector3.Reflect(ray.direction, hit.normal));
         if (bounces <= 0)
         {
             // stop the function because exceeding number of bounces
@@ -84,7 +78,6 @@ public class RayTracingReflection : MonoBehaviour
             return new Color(0, 1, 0);  // green background // TODO: change to background color   
         }
 
-        ray = new Ray(hit.point, Vector3.Reflect(ray.direction, hit.normal));
         Color pixelColor = new Color(0, 0, 0);  // Default color (black)
         if (Physics.Raycast(ray.origin, ray.direction, out hit, length))
         {
@@ -93,8 +86,8 @@ public class RayTracingReflection : MonoBehaviour
                 // reflected ray hit mirror
                 length -= Vector3.Distance(ray.origin, hit.point);
                 pixelColor = recRayRef(hit, length, bounces - 1);
-                
-                 if(LinearInterpolation)
+
+                if (LinearInterpolation)
                     linear_interpolation(hit, pixelColor);
                 else
                     nearest_neighbor_interpolation(hit, pixelColor);
@@ -141,7 +134,7 @@ public class RayTracingReflection : MonoBehaviour
         hitTex.Apply();
     }
 
-    
+
     /// <summary>
     /// Linear interpolation means that we have some surrounding points to a center point P 
     /// and those surrounding point would contribute to the colouring of P. The way that we do
@@ -151,7 +144,7 @@ public class RayTracingReflection : MonoBehaviour
     /// </summary>
 
     private void linear_interpolation(RaycastHit hit, Color color)
-    {   
+    {
         Renderer hitRend = hit.collider.GetComponent<Renderer>();
         Texture2D hitTex = (Texture2D)hitRend.material.mainTexture;
         Vector2 texCoord = hit.textureCoord;
@@ -167,17 +160,18 @@ public class RayTracingReflection : MonoBehaviour
         for (int i = start_x; i <= end_x; i++)
         {
             for (int j = start_y; j <= end_y; j++)
-            {   if(!(i == j))
-                    hitTex.SetPixel(i, j, (color)/4 + hitTex.GetPixel(i, j));
+            {
+                if (!(i == j))
+                    hitTex.SetPixel(i, j, (color) / 4 + hitTex.GetPixel(i, j));
             }
         }
 
         int x = Mathf.FloorToInt(texCoord.x);
         int y = Mathf.FloorToInt(texCoord.y);
 
-         
+
         //hitTex.SetPixel(x, y, color);
-        hitTex.SetPixel(x, y, 2*color / 3 + hitTex.GetPixel(x, y) / 3);
+        hitTex.SetPixel(x, y, 2 * color / 3 + hitTex.GetPixel(x, y) / 3);
         hitTex.Apply();
     }
 
@@ -185,6 +179,7 @@ public class RayTracingReflection : MonoBehaviour
     /// return the color of the hitting point on the object. 
     /// </summary>
     /// <param name="hit">RaycastHit object of the hitting point of the ray</param>
+    /// <return>Color of the hitting point on the object</return>
     private Color getObjectColor(RaycastHit hit)
     {
         Renderer objRend = hit.transform.GetComponent<MeshRenderer>();

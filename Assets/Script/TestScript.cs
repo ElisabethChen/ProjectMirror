@@ -184,14 +184,14 @@ public class TestScript : MonoBehaviour
     private Color recRayRef(RaycastHit hit, float length, int bounces)    // recrusive
     {
         // NOTE: NOT DONE
+        ray = new Ray(hit.point, Vector3.Reflect(ray.direction, hit.normal));
         if (bounces <= 0)
         {
             // stop the function because exceeding number of bounces
             // draw background color
-            return new Color(0, 1, 0);  // green background // TODO: change to background color   
+            return getSkyBoxColor(ray); // TODO: change to background color   
         }
 
-        ray = new Ray(hit.point, Vector3.Reflect(ray.direction, hit.normal));
         Color pixelColor = new Color(0, 0, 0);  // black
         if (Physics.Raycast(ray.origin, ray.direction, out hit, length))
         {
@@ -223,12 +223,22 @@ public class TestScript : MonoBehaviour
             // TODO: set the pixel color as the backgroud/Skybox
             Vector3 direction = ray.direction;
             // (RenderSettings.skybox.GetTexture("Left") as Texture2D).GetPixelBilinear((direction.z/-direction.x+1)/2, (direction.y/-direction.x+1)/2);
-            pixelColor = new Color(0, 1, 0);    // green background
+            pixelColor = getSkyBoxColor(ray);
             lineRenderer.positionCount += 1;
             lineRenderer.SetPosition(lineRenderer.positionCount - 1, ray.origin + ray.direction * length);
         }
 
         return pixelColor;
+    }
+
+    private Color getSkyBoxColor(Ray ray)
+    {
+        Texture2D skyTex = (Texture2D) RenderSettings.skybox.GetTexture("_LeftTex");
+        Vector3 direction = ray.direction;
+        Color color = skyTex.GetPixelBilinear((direction.z/-direction.x)/2, (direction.y/-direction.x+1)/2);
+        Debug.Log(color);
+        color = new Color(0, 0, 0, 1);
+        return color;
     }
 
     private Color getObjectColor(RaycastHit hit)

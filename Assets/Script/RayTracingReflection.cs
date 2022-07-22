@@ -2,56 +2,139 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-[RequireComponent(typeof(LineRenderer))]
-
 public class RayTracingReflection : MonoBehaviour
 {
     public int maxBounces;
     public float rayLength;
-    private int width, height;
+    public GameObject mirror_obj;
+    public float ray_step_size = 0.02f;
+    private int mirror_type;
+    private ArrayList mirror_types;
     private Ray ray;
-    public bool LinearInterpolation;
+    
 
+    /// <summary>
+    /// A built in function used to simple print the instructions for the player and the mirror currently displayed.
+    /// There is a counter called 'mirror_type' that is used to index what the current mirror is as well as the next one.
+    /// To check for a next mirror image we can easily look at the next index and take modulo on the lengt of the collection of mirrors.
+    /// In C# the length of a collection is accessible to us via the function ".Count".
+    /// The code snippet "mirror_types[(mirror_type +1)%mirror_types.Count]);" as such means that we are always looking at the next element
+    /// modulo the amount of elements that we have within that list. 
+    /// </summary>
+
+    void OnGUI()
+    {   
+        GUI.Label(new Rect(10, 20, 500, 20), "Instructions:");
+        GUI.Label(new Rect(10, 30, 500, 20), "Press up and down key to move the camera view forward and backward.");
+        
+        // Instructions for rendering a new mirror:
+        GUI.Label(new Rect(10, 40, 500, 20), "Press space to re-render the reflection surface with as the next mirror type.");
+        GUI.Label(new Rect(10, 60, 500, 20), "Current Mirror Type: " + mirror_types[mirror_type]);
+        GUI.Label(new Rect(10, 70, 500, 20), "Next Mirror Type: " + mirror_types[(mirror_type +1)%mirror_types.Count]);
+
+    }
+    
     // Start is called before the first frame update
     void Start()
-    {
-        width = Camera.main.pixelWidth;
-        height = Camera.main.pixelHeight;
+    {   
+        // Add the different mirror types:
+        mirror_types = new ArrayList();
+        mirror_types.Add("Normal Mirror");
+        mirror_types.Add("Distorted Height");
+        mirror_type = 0;
+        Set_White();
         castAllRays();
-    }
-
-    // Update is called once per frame
-    void Update()
-    {
+        
     }
 
     /// <summary>
-    /// cast one ray for each pixel on the screen the camera shows. These rays
-    /// preform ray tracing reflections on the objects with the tag "Mirror".
+    /// A built in function used to simple print the instructions for the player and the mirror currently displayed.
+    /// There is a counter called 'mirror_type' that 
+    /// </summary>
+
+    void repaint(){
+        Set_White();
+        castAllRays();
+    }
+
+    /// <summary>
+    /// Updates the mirror on key input from the user as well as movement of the camera view. 
+    /// Press Space to re-render the reflection surface. Press up and down key to move the camera along the z-axis.  
+    /// </summary>
+    void Update()
+    {
+        if(Input.GetKeyDown("space")){
+            print("Right pressed");
+            mirror_type += 1;
+            mirror_type %= mirror_types.Count;
+            repaint();
+        }
+
+        if(Input.GetKeyDown("up")){
+            this.transform.position += new Vector3(0, 0, 1);
+        }
+        
+        if(Input.GetKeyDown("down")){
+            this.transform.position -= new Vector3(0, 0, 1);
+        }
+    }
+
+
+    /// <summary>
+    /// A function that sets the entire texture white. We just iterate through each pixel and set them to be white.
+    /// </summary>
+
+    void Set_White(){
+        Renderer whiteRenderer = mirror_obj.GetComponent<Renderer>();
+        Texture2D whiteTexture = (Texture2D)whiteRenderer.material.mainTexture;
+        Color32 white = new Color32(255, 255, 255, 0);
+        Color32[] pixels = whiteTexture.GetPixels32();
+
+     for (int i = 0; i < pixels.Length; i++) {
+        pixels[i] = white;
+     }
+      
+        whiteTexture.SetPixels32(pixels);
+        whiteTexture.Apply();
+    }
+
+    Ray distort_height(Ray ray, RaycastHit hit){
+        return new Ray(hit.point, new Vector3(ray.direction.x/16, 4*ray.direction.y, ray.direction.z));
+    }
+
+    /// <summary>
+    /// cast one ray from the camera to each pixel on the screen (i.e. image plane). 
+    /// These rays preform ray tracing reflections on the objects with the tag "Mirror".
     /// </summary>
     private void castAllRays()
-    {
-        for (int y = 0; y < height; y++)
-        {
-            for (int x = 0; x < width; x++)
-            {
-                ray = Camera.main.ScreenPointToRay(new Vector3(x, y, 0));
+    {   
+        // Testar 100x100 rays:
+        float height = mirror_obj.transform.localScale.y;
+        float width = mirror_obj.transform.localScale.x;
+        float step_size = ray_step_size;
+       
+
+        for (float x = 0; x < width; x+= step_size){
+            for(float y = 0; y < height; y+= step_size){
+                ray.origin = this.transform.position;
+                Vector3 P2 = mirror_obj.transform.position + new Vector3(-width/2 + x, height/2 - y);
+                ray.direction = P2 - ray.origin;
                 RaycastHit hit;
-                // NOTE: does not use layer for Physics.Raycast() since it can´t detect 
-                //       if the ray hit some other object before hitting the mirror
+
                 if (Physics.Raycast(ray.origin, ray.direction, out hit, rayLength))
-                {
+                {   
+
                     if (hit.collider.tag == "Mirror")
-                    {
+                    {   
+
                         float remainingLength = rayLength - Vector3.Distance(ray.origin, hit.point);
 
                         // fist ray hit mirror
-                        Color color = recRayRef(hit, remainingLength, maxBounces - 1);
-
-                        if (LinearInterpolation)
-                            linear_interpolation(hit, color);
-                        else
-                            nearest_neighbor_interpolation(hit, color);
+                       Color color = recRayRef(hit, remainingLength, maxBounces - 1);
+                       
+                       // Apply Color:
+                       NN_interpolation(hit, color);
+                        
                     }
                 }
             }
@@ -59,23 +142,54 @@ public class RayTracingReflection : MonoBehaviour
     }
 
     /// <summary>
+    /// A function that uses Nearest Neighbor Interpolation. When a pixel with coordinates (x,y) is painted in a color, its neighbors too are painted.  
+    /// </summary>
+
+    private void NN_interpolation(RaycastHit hit, Color color)
+    {
+        Renderer hitRend = hit.collider.GetComponent<Renderer>();
+        Texture2D hitTex = (Texture2D)hitRend.material.mainTexture;
+        Vector2 texCoord = hit.textureCoord;
+        texCoord.x *= hitTex.width;
+        texCoord.y *= hitTex.height;
+        
+        for(int x = 0; x < 3; x++){
+            for(int y = 0; y < 3; y++){
+                hitTex.SetPixel(Mathf.FloorToInt(texCoord.x) + x, Mathf.FloorToInt(texCoord.y) + y, color);
+            }
+        }
+        hitTex.Apply();
+    }
+
+    /// <summary>
     /// Preform recrusive ray tracing reflection if the object the ray hit has the tag
     /// "Mirror". If the object does not have this tag, the color of the point the ray
-    /// hit will be showned on the mirror that reflected that object. If the ray did not 
-    /// hit anything, the sky box will be showned. 
+    /// hit will be showned on the reflected mirror. If the ray did not hit anything, 
+    /// green color will be showned. 
     /// </summary>
     /// <param name="hit">RaycastHit object of the hitting point of the ray</param>
     /// <param name="length">the length of the ray</param>
     /// <param name="bounces">the ramaining bounces/reflections the ray can do</param>
     /// <return>color of the hitting point of the ray</return>
+    
     private Color recRayRef(RaycastHit hit, float length, int bounces)
     {
         ray = new Ray(hit.point, Vector3.Reflect(ray.direction, hit.normal));
+
+        // Distortions:
+        if(mirror_type == 1){
+            ray = distort_height(ray, hit);
+        }
+        else if(mirror_type == 2){
+
+        }
+        // Distorts the mirror:
+        //ray = new Ray(hit.point, distorted_direction_vector);
+
         if (bounces <= 0)
         {
             // stop the function because exceeding number of bounces
-            // draw background color
-            return new Color(0, 1, 0);  // green background // TODO: change to background color   
+            return new Color(0, 1, 0);  // green color // TODO: change to background color   
         }
 
         Color pixelColor = new Color(0, 0, 0);  // Default color (black)
@@ -86,11 +200,6 @@ public class RayTracingReflection : MonoBehaviour
                 // reflected ray hit mirror
                 length -= Vector3.Distance(ray.origin, hit.point);
                 pixelColor = recRayRef(hit, length, bounces - 1);
-
-                if (LinearInterpolation)
-                    linear_interpolation(hit, pixelColor);
-                else
-                    nearest_neighbor_interpolation(hit, pixelColor);
             }
             else
             {
@@ -106,73 +215,6 @@ public class RayTracingReflection : MonoBehaviour
         }
 
         return pixelColor;
-    }
-
-    /// <summary>
-    /// set the color of the hitting point as the given color
-    /// </summary>
-    /// <param name="hit">RaycastHit object of the hitting point of the ray</param>
-    /// <param name="color">the color that the hitting point should be set to</param>
-
-    private void nearest_neighbor_interpolation(RaycastHit hit, Color color)
-    {
-
-        // TODO: set the mirror pixel color as reflected color
-        Renderer hitRend = hit.collider.GetComponent<Renderer>();
-        Texture2D hitTex = (Texture2D)hitRend.material.mainTexture;
-        Vector2 texCoord = hit.textureCoord;
-        texCoord.x *= hitTex.width;
-        texCoord.y *= hitTex.height;
-
-        // to avoid the problem where too few rays sending when there are too long distance to 
-        // the camera (see report), 4 neighbors pixels (1 hitting point pixel and 3 neighbors 
-        // pixels) are set to the given color
-        hitTex.SetPixel(Mathf.FloorToInt(texCoord.x), Mathf.FloorToInt(texCoord.y), color);
-        hitTex.SetPixel(Mathf.FloorToInt(texCoord.x + 1), Mathf.FloorToInt(texCoord.y), color);
-        hitTex.SetPixel(Mathf.FloorToInt(texCoord.x), Mathf.FloorToInt(texCoord.y + 1), color);
-        hitTex.SetPixel(Mathf.FloorToInt(texCoord.x + 1), Mathf.FloorToInt(texCoord.y + 1), color);
-        hitTex.Apply();
-    }
-
-
-    /// <summary>
-    /// Linear interpolation means that we have some surrounding points to a center point P 
-    /// and those surrounding point would contribute to the colouring of P. The way that we do
-    /// this is by doing it the other way around. Instead of having P being the point that checks
-    /// its neighbor we let each point that hits the surface contribute somewhat to neighboring
-    /// points with their colour. 
-    /// </summary>
-
-    private void linear_interpolation(RaycastHit hit, Color color)
-    {
-        Renderer hitRend = hit.collider.GetComponent<Renderer>();
-        Texture2D hitTex = (Texture2D)hitRend.material.mainTexture;
-        Vector2 texCoord = hit.textureCoord;
-        texCoord.x *= hitTex.width;
-        texCoord.y *= hitTex.height;
-
-        int end_x = Mathf.FloorToInt(texCoord.x + 1);
-        int start_x = Mathf.FloorToInt(texCoord.x - 1);
-        int end_y = Mathf.FloorToInt(texCoord.y + 1);
-        int start_y = Mathf.FloorToInt(texCoord.y - 1);
-
-        // Set neighbor colorings
-        for (int i = start_x; i <= end_x; i++)
-        {
-            for (int j = start_y; j <= end_y; j++)
-            {
-                if (!(i == j))
-                    hitTex.SetPixel(i, j, (color) / 4 + hitTex.GetPixel(i, j));
-            }
-        }
-
-        int x = Mathf.FloorToInt(texCoord.x);
-        int y = Mathf.FloorToInt(texCoord.y);
-
-
-        //hitTex.SetPixel(x, y, color);
-        hitTex.SetPixel(x, y, 2 * color / 3 + hitTex.GetPixel(x, y) / 3);
-        hitTex.Apply();
     }
 
     /// <summary>
